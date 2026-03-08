@@ -65,7 +65,7 @@ def get_history(user_id):
 
 @app.get("/")
 def home():
-     return {"message": "Welcome to the Diet Specialist Chatbot API!"}
+     return {"message": "Welcome to the Learrning Chatbot API!"}
 
 @app.post("/chat")
 def chat(request: ChatRequest):
