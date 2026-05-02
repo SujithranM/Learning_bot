@@ -17,9 +17,6 @@ load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 mongo_uri = os.getenv("MONGODB_URI")
 
-#print("A",groq_api_key is not None)
-#print("B", mongo_uri is not None)
-
 
 # Connect to MongoDB.
 # The app stores every user's questions and bot answers in this collection.
@@ -40,6 +37,7 @@ class ChatRequest(BaseModel):
     user_id: str
     question: str
 
+
 # Allow the frontend page to call this backend API.
 app.add_middleware(
     CORSMiddleware,
@@ -47,7 +45,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
-    
 )
 
 # Let FastAPI serve files from the static folder.
@@ -59,16 +56,18 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # and the user message contains the new question.
 prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", 
-         "You are Study Bot, an AI-powered academic assistant. "
-         "Your role is to help students with study-related questions only. "
-         "Always answer in a clear, orderly Markdown format. "
-         "Do not reply as one long paragraph. "
-         "Use this structure when it fits the question: "
-         "## Short Answer, ## Explanation, ## Steps or Key Points, and ## Example. "
-         "Use numbered steps for processes, bullet points for lists, and tables for comparisons. "
-         "Keep paragraphs short, with no more than three sentences each. "
-         "Use plain ASCII characters only. Avoid emoji, special numbering symbols, and typographic dashes or quotes."
+        (
+            "system",
+            "You are Study Bot, an AI-powered academic assistant. "
+            "Your role is to help students with study-related questions only. "
+            "Always answer in a clear, orderly Markdown format. "
+            "Do not reply as one long paragraph. "
+            "Use this structure when it fits the question: "
+            "## Short Answer, ## Explanation, ## Steps or Key Points, and ## Example. "
+            "Use numbered steps for processes, bullet points for lists, and tables for comparisons. "
+            "Keep paragraphs short, with no more than three sentences each. "
+            "Use plain ASCII characters only. "
+            "Avoid emoji, special numbering symbols, and typographic dashes or quotes."
         ),
         ("placeholder", "{history}"),
         ("user", "{question}")
@@ -120,10 +119,12 @@ async def get_history(user_id):
 
     return history
 
+
 @app.get("/")
 def home():
     # Show the main web page when the user opens http://127.0.0.1:8000/
     return FileResponse("static/index.html")
+
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
@@ -152,6 +153,6 @@ async def chat(request: ChatRequest):
             "timestamp": datetime.now(timezone.utc)
         }
     ])
-    
+
     # Step 5: Send the bot answer back to the frontend as JSON.
-    return {"response" : response_text}
+    return {"response": response_text}
