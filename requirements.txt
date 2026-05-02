@@ -4,6 +4,7 @@ langchain_groq
 langchain_core
 langchain_community
 pymongo
+motor
 fastapi
 uvicorn
 python-multipart
