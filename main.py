@@ -3,6 +3,7 @@ import os
 import sqlite3
 import unicodedata
 from datetime import datetime, timezone
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -17,9 +18,13 @@ from pydantic import BaseModel
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 
+# This is the folder where main.py is located.
+# It helps the app find files correctly on PythonAnywhere.
+BASE_DIR = Path(__file__).resolve().parent
+
 # This is the local SQLite database file.
 # Python will create this file automatically if it does not exist.
-DATABASE_NAME = "chat_history.db"
+DATABASE_NAME = BASE_DIR / "chat_history.db"
 
 
 # Create the FastAPI app.
@@ -47,7 +52,7 @@ app.add_middleware(
 
 # Let FastAPI serve files from the static folder.
 # This makes /static/index.html and other frontend files available in the browser.
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
 def create_database() -> None:
@@ -178,7 +183,7 @@ def save_messages(user_id: str, question: str, answer: str) -> None:
 @app.get("/")
 def home():
     # Show the main web page when the user opens http://127.0.0.1:8000/
-    return FileResponse("static/index.html")
+    return FileResponse(BASE_DIR / "static" / "index.html")
 
 
 @app.post("/chat")
