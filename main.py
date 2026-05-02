@@ -1,28 +1,26 @@
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
-from motor.motor_asyncio import AsyncIOMotorClient
-from datetime import datetime, timezone
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
+import sqlite3
 import unicodedata
+from datetime import datetime, timezone
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
+from pydantic import BaseModel
 
 # Load secret values from the .env file.
-# Example: GROQ_API_KEY and MONGODB_URI are stored there instead of inside code.
+# Example: GROQ_API_KEY is stored there instead of inside code.
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
-mongo_uri = os.getenv("MONGODB_URI")
 
+# This is the local SQLite database file.
+# Python will create this file automatically if it does not exist.
+DATABASE_NAME = "chat_history.db"
 
-# Connect to MongoDB.
-# The app stores every user's questions and bot answers in this collection.
-client = AsyncIOMotorClient(mongo_uri)
-db = client["Genie"]
-collection = db["users"]
 
 # Create the FastAPI app.
 app = FastAPI()
@@ -50,6 +48,31 @@ app.add_middleware(
 # Let FastAPI serve files from the static folder.
 # This makes /static/index.html and other frontend files available in the browser.
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+def create_database() -> None:
+    """Create the messages table if it does not already exist."""
+    connection = sqlite3.connect(DATABASE_NAME)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            message TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        )
+        """
+    )
+
+    connection.commit()
+    connection.close()
+
+
+# Make sure the database is ready when the app starts.
+create_database()
 
 # This prompt tells the AI how it should behave.
 # The system message gives rules, the history keeps previous chat messages,
@@ -108,16 +131,48 @@ def normalize_answer(text: str) -> str:
     return normalized.encode("ascii", "ignore").decode("ascii")
 
 
-async def get_history(user_id):
-    """Get all previous messages for one user from MongoDB."""
-    cursor = collection.find({"user_id": user_id}).sort("timestamp", 1)
-    history = []
+def get_history(user_id: str) -> list[tuple[str, str]]:
+    """Get all previous messages for one user from SQLite."""
+    connection = sqlite3.connect(DATABASE_NAME)
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT role, message
+        FROM messages
+        WHERE user_id = ?
+        ORDER BY timestamp ASC
+        """,
+        (user_id,)
+    )
 
     # LangChain expects history as pairs like ("user", "hello").
-    async for chat in cursor:
-        history.append((chat["role"], chat["message"]))
+    history = cursor.fetchall()
+
+    connection.close()
 
     return history
+
+
+def save_messages(user_id: str, question: str, answer: str) -> None:
+    """Save the user's question and the bot's answer in SQLite."""
+    connection = sqlite3.connect(DATABASE_NAME)
+    cursor = connection.cursor()
+    current_time = datetime.now(timezone.utc).isoformat()
+
+    cursor.executemany(
+        """
+        INSERT INTO messages (user_id, role, message, timestamp)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (user_id, "user", question, current_time),
+            (user_id, "assistant", answer, current_time)
+        ]
+    )
+
+    connection.commit()
+    connection.close()
 
 
 @app.get("/")
@@ -129,7 +184,7 @@ def home():
 @app.post("/chat")
 async def chat(request: ChatRequest):
     # Step 1: Get the old conversation for this user.
-    history = await get_history(request.user_id)
+    history = get_history(request.user_id)
 
     # Step 2: Ask the AI model for an answer.
     # ainvoke is used because this route is async.
@@ -138,21 +193,8 @@ async def chat(request: ChatRequest):
     # Step 3: Clean the answer so the frontend gets simple readable text.
     response_text = normalize_answer(response.content)
 
-    # Step 4: Save both the user's question and the bot's answer in MongoDB.
-    await collection.insert_many([
-        {
-            "user_id": request.user_id,
-            "role": "user",
-            "message": request.question,
-            "timestamp": datetime.now(timezone.utc)
-        },
-        {
-            "user_id": request.user_id,
-            "role": "assistant",
-            "message": response_text,
-            "timestamp": datetime.now(timezone.utc)
-        }
-    ])
+    # Step 4: Save both the user's question and the bot's answer in SQLite.
+    save_messages(request.user_id, request.question, response_text)
 
     # Step 5: Send the bot answer back to the frontend as JSON.
     return {"response": response_text}

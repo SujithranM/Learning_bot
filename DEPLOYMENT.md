@@ -1,6 +1,19 @@
-# Koyeb Deployment Guide
+# PythonAnywhere Deployment Guide
 
-This guide explains how to deploy the Study Bot FastAPI app on Koyeb.
+This guide explains how to deploy the Study Bot FastAPI app on PythonAnywhere.
+
+## Important Note
+
+This project now uses SQLite for chat history.
+
+SQLite stores data in a local file named:
+
+```text
+chat_history.db
+```
+
+That means you do not need MongoDB, PostgreSQL, or any external database for the
+free PythonAnywhere deployment.
 
 ## Project Files Needed
 
@@ -14,69 +27,122 @@ Make sure these files are in your GitHub repository:
 Do not upload `.env`. It contains secret values. Your `.gitignore` already
 keeps `.env` out of Git.
 
+Also do not upload `chat_history.db`. It is created automatically when the app
+runs.
+
 ## Step 1: Push Code To GitHub
 
 Open a terminal in this project folder and run:
 
 ```bash
 git add .
-git commit -m "Add Koyeb deployment guide"
+git commit -m "Use SQLite for PythonAnywhere deployment"
 git push
 ```
 
-## Step 2: Create A Koyeb App
+## Step 2: Create PythonAnywhere Account
 
-1. Go to Koyeb.
-2. Create a new app.
-3. Choose GitHub as the deployment method.
-4. Select your Study Bot repository.
-5. Choose Buildpack as the builder.
+1. Go to PythonAnywhere.
+2. Create a free account.
+3. Open a Bash console.
 
-Koyeb will install the packages from `requirements.txt`.
+Your website URL will look like this:
 
-## Step 3: Add The Run Command
-
-Use this run command:
-
-```bash
-uvicorn main:app --host 0.0.0.0
+```text
+https://YOURUSERNAME.pythonanywhere.com
 ```
 
-This starts the FastAPI app and makes it available to Koyeb.
+Replace `YOURUSERNAME` with your PythonAnywhere username.
 
-## Step 4: Add Environment Variables
+## Step 3: Download Your Project
 
-In the Koyeb app settings, add these environment variables:
+In the PythonAnywhere Bash console, run:
+
+```bash
+git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY_NAME.git
+cd YOUR_REPOSITORY_NAME
+```
+
+Replace the GitHub URL parts with your real GitHub username and repository name.
+
+## Step 4: Create A Virtual Environment
+
+Run:
+
+```bash
+mkvirtualenv studybot --python=python3.10
+pip install -r requirements.txt
+pip install --upgrade pythonanywhere
+```
+
+## Step 5: Create The `.env` File On PythonAnywhere
+
+Create a `.env` file inside your project folder on PythonAnywhere.
+
+Add:
 
 ```text
 GROQ_API_KEY=your_groq_api_key
-MONGODB_URI=your_mongodb_connection_string
 ```
 
-Use the same values from your local `.env` file.
+Use the same Groq key from your local `.env` file.
 
-## Step 5: Deploy
+Remember: do not push `.env` to GitHub.
 
-Click Deploy and wait for the build to finish.
+## Step 6: Create The FastAPI Website
 
-After deployment, Koyeb gives you a public URL. Open that URL in your browser
-to use the Study Bot online.
+PythonAnywhere uses an ASGI command for FastAPI apps.
 
-## Step 6: Test The App
+Run this command, but replace `YOURUSERNAME` and `YOUR_REPOSITORY_NAME`:
 
-Ask a study question in the deployed app.
+```bash
+pa website create --domain YOURUSERNAME.pythonanywhere.com --command '/home/YOURUSERNAME/.virtualenvs/studybot/bin/uvicorn --app-dir /home/YOURUSERNAME/YOUR_REPOSITORY_NAME --uds ${DOMAIN_SOCKET} main:app'
+```
 
-If the bot does not answer, check:
+## Step 7: Open Your Website
 
-- `GROQ_API_KEY` is correct.
-- `MONGODB_URI` is correct.
-- MongoDB allows connections from Koyeb.
-- Koyeb deployment logs do not show errors.
-
-## Useful Link
-
-Koyeb FastAPI guide:
+Go to:
 
 ```text
-https://www.koyeb.com/docs/deploy/fastapi
+https://YOURUSERNAME.pythonanywhere.com
+```
+
+Ask a study question to test the app.
+
+## Step 8: If You Change Code Later
+
+In the PythonAnywhere Bash console:
+
+```bash
+cd YOUR_REPOSITORY_NAME
+git pull
+pa website reload --domain YOURUSERNAME.pythonanywhere.com
+```
+
+## Troubleshooting
+
+If the web page does not load:
+
+- Check the PythonAnywhere error log.
+- Make sure the ASGI command has the correct username and project folder.
+- Make sure dependencies installed successfully.
+
+If the bot does not answer:
+
+- Check `GROQ_API_KEY`.
+- Check the PythonAnywhere error log.
+- Make sure `api.groq.com` is allowed on your PythonAnywhere account.
+
+## Useful Links
+
+PythonAnywhere FastAPI/ASGI guide:
+
+```text
+https://help.pythonanywhere.com/pages/ASGICommandLine/
+```
+
+PythonAnywhere free account limits:
+
+```text
+https://help.pythonanywhere.com/pages/FreeAccountsFeatures/
 ```
