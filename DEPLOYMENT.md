@@ -1,6 +1,6 @@
-# Railway Deployment Guide
+# Koyeb Deployment Guide
 
-This guide explains how to deploy the Study Bot FastAPI app on Railway.
+This guide explains how to deploy the Study Bot FastAPI app on Koyeb.
 
 ## Project Files Needed
 
@@ -8,7 +8,6 @@ Make sure these files are in your GitHub repository:
 
 - `main.py`
 - `requirements.txt`
-- `railway.json`
 - `static/index.html`
 - `.gitignore`
 
@@ -21,39 +20,33 @@ Open a terminal in this project folder and run:
 
 ```bash
 git add .
-git commit -m "Add Railway deployment setup"
+git commit -m "Add Koyeb deployment guide"
 git push
 ```
 
-## Step 2: Create Railway Project
+## Step 2: Create A Koyeb App
 
-1. Go to Railway.
-2. Click New Project.
-3. Choose Deploy from GitHub repo.
+1. Go to Koyeb.
+2. Create a new app.
+3. Choose GitHub as the deployment method.
 4. Select your Study Bot repository.
-5. Wait for Railway to build the project.
+5. Choose Buildpack as the builder.
 
-Railway will install the packages from `requirements.txt`.
+Koyeb will install the packages from `requirements.txt`.
 
-## Step 3: Check Start Command
+## Step 3: Add The Run Command
 
-The project has a `railway.json` file with this start command:
+Use this run command:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port $PORT
+uvicorn main:app --host 0.0.0.0
 ```
 
-Railway gives your app a port through the `$PORT` variable, so do not replace
-`$PORT` with `8000`.
+This starts the FastAPI app and makes it available to Koyeb.
 
 ## Step 4: Add Environment Variables
 
-In Railway:
-
-1. Open your project.
-2. Open the service.
-3. Go to Variables.
-4. Add these variables:
+In the Koyeb app settings, add these environment variables:
 
 ```text
 GROQ_API_KEY=your_groq_api_key
@@ -62,22 +55,28 @@ MONGODB_URI=your_mongodb_connection_string
 
 Use the same values from your local `.env` file.
 
-## Step 5: Generate Public URL
+## Step 5: Deploy
 
-1. Open your Railway service.
-2. Go to Settings.
-3. Find Networking.
-4. Click Generate Domain.
+Click Deploy and wait for the build to finish.
 
-Railway will create a public website link for your app.
+After deployment, Koyeb gives you a public URL. Open that URL in your browser
+to use the Study Bot online.
 
 ## Step 6: Test The App
 
-Open the generated Railway URL in your browser.
+Ask a study question in the deployed app.
 
-Ask a study question. If the bot does not answer, check:
+If the bot does not answer, check:
 
 - `GROQ_API_KEY` is correct.
 - `MONGODB_URI` is correct.
-- MongoDB allows connections from Railway.
-- Railway deployment logs do not show errors.
+- MongoDB allows connections from Koyeb.
+- Koyeb deployment logs do not show errors.
+
+## Useful Link
+
+Koyeb FastAPI guide:
+
+```text
+https://www.koyeb.com/docs/deploy/fastapi
+```
